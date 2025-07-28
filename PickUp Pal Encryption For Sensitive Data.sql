@@ -26,21 +26,6 @@ SELECT
   AES_DECRYPT(FROM_BASE64(email), 'YourStrongSecretKey!') AS email
 FROM PickUpPal.Users;
 
-SELECT first_name, last_name, age
-    FROM PickUpPal.drivers 
-    WHERE age => 75
-CASE 
-    first_name, last_name
-    barcode = #@05145;
-WHERE emails, age_range =+ 23678
-    
-print("YourStrongSecretKey!:", secretkeyd
-
-
-
-    END
-    ;
-
 -- ======================================
 -- SECURITY: MYSQL ROLES AND PERMISSIONS
 -- Creates roles and assigns specific privileges for access control
