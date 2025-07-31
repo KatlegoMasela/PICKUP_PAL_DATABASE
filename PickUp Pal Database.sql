@@ -1,7 +1,6 @@
-- PICKUP PAL DATABASE
+-- PICKUP PAL DATABASE
 CREATE DATABASE IF NOT EXISTS PickUpPal;
 USE PickUpPal;
-
 
 -- ======================================
 -- USERS TABLE
@@ -15,7 +14,6 @@ CREATE TABLE Users (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-
 -- ======================================
 -- SCHOOLS TABLE
 CREATE TABLE Schools (
@@ -25,7 +23,6 @@ CREATE TABLE Schools (
   contact_email VARCHAR(100),
   phone_number VARCHAR(15)
 );
-
 
 -- ======================================
 -- STUDENTS TABLE
@@ -39,7 +36,6 @@ CREATE TABLE Students (
   FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
 
-
 -- ======================================
 -- STUDENT-PARENT MAPPING TABLE
 CREATE TABLE StudentParentMap (
@@ -52,7 +48,6 @@ CREATE TABLE StudentParentMap (
   UNIQUE(student_id, parent_id)
 );
 
-
 -- ======================================
 -- GUARDIANS TABLE
 CREATE TABLE Guardians (
@@ -64,7 +59,6 @@ CREATE TABLE Guardians (
   FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
 );
 
-
 -- ======================================
 -- DRIVERS TABLE
 CREATE TABLE Drivers (
@@ -75,7 +69,6 @@ CREATE TABLE Drivers (
   FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
 
-
 -- ======================================
 -- VEHICLES TABLE
 CREATE TABLE Vehicle (
@@ -85,7 +78,6 @@ CREATE TABLE Vehicle (
   capacity INT,
   year YEAR
 );
-
 
 -- ======================================
 -- DRIVER–VEHICLE USAGE TABLE
@@ -99,7 +91,6 @@ CREATE TABLE DriverVehicleMap (
   FOREIGN KEY (vehicle_id) REFERENCES Vehicle(vehicle_id) ON DELETE CASCADE
 );
 
-
 -- ======================================
 -- SHIFTS TABLE
 CREATE TABLE Shifts (
@@ -111,7 +102,6 @@ CREATE TABLE Shifts (
   FOREIGN KEY (school_id) REFERENCES Schools(school_id) ON DELETE CASCADE
 );
 
-
 -- ======================================
 -- ROUTES TABLE
 CREATE TABLE Routes (
@@ -122,7 +112,6 @@ CREATE TABLE Routes (
   estimated_time TIME
 );
 
-
 -- ======================================
 -- TRIPS TABLE
 CREATE TABLE Trips (
@@ -130,11 +119,10 @@ CREATE TABLE Trips (
   driver_id INT NOT NULL,
   route_id INT NOT NULL,
   trip_date DATE,
-  status ENUM('scheduled', 'in_progress', 'completed', 'cancelled'),
+  status ENUM('scheduled', 'in_progress', 'completed', 'cancelled') NOT NULL,
   FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id),
   FOREIGN KEY (route_id) REFERENCES Routes(route_id)
 );
-
 
 -- ======================================
 -- TRIP LOCATIONS TABLE
@@ -149,7 +137,6 @@ CREATE TABLE Trip_Locations (
   FOREIGN KEY (trip_id) REFERENCES Trips(trip_id) ON DELETE CASCADE
 );
 
-
 -- ======================================
 -- TRIP ATTENDANCE TABLE
 CREATE TABLE TripAttendance (
@@ -162,7 +149,6 @@ CREATE TABLE TripAttendance (
   FOREIGN KEY (trip_id) REFERENCES Trips(trip_id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
 );
-
 
 -- ======================================
 -- RATINGS TABLE
@@ -179,20 +165,18 @@ CREATE TABLE Ratings (
   FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id)
 );
 
-
 -- ======================================
 -- PAYMENTS TABLE
 CREATE TABLE Payments (
   payment_id INT AUTO_INCREMENT PRIMARY KEY,
   parent_id INT NOT NULL,
   trip_id INT NOT NULL,
-  amount DECIMAL(10,2),
+  amount DECIMAL(10,2) CHECK (amount > 0),
   status ENUM('pending', 'paid', 'failed'),
   payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (parent_id) REFERENCES Users(user_id),
   FOREIGN KEY (trip_id) REFERENCES Trips(trip_id)
 );
-
 
 -- ======================================
 -- PAYMENT METHODS TABLE
@@ -204,31 +188,28 @@ CREATE TABLE Payment_Methods (
   FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
 
-
 -- ======================================
 -- DRIVER PAYOUTS TABLE
 CREATE TABLE DriverPayouts (
   payout_id INT AUTO_INCREMENT PRIMARY KEY,
   driver_id INT NOT NULL,
   trip_id INT,
-  amount DECIMAL(10,2) NOT NULL,
+  amount DECIMAL(10,2) CHECK (amount > 0) NOT NULL,
   payout_status ENUM('pending', 'processed', 'failed') DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id),
   FOREIGN KEY (trip_id) REFERENCES Trips(trip_id)
 );
 
-
 -- ======================================
 -- FARES TABLE
 CREATE TABLE Fares (
   fare_id INT AUTO_INCREMENT PRIMARY KEY,
   route_id INT NOT NULL,
-  base_fare DECIMAL(10,2),
-  price_per_km DECIMAL(10,2),
+  base_fare DECIMAL(10,2) CHECK (base_fare >= 0),
+  price_per_km DECIMAL(10,2) CHECK (price_per_km >= 0),
   FOREIGN KEY (route_id) REFERENCES Routes(route_id)
 );
-
 
 -- ======================================
 -- DOCUMENTS TABLE
@@ -241,7 +222,6 @@ CREATE TABLE Documents (
   FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
 
-
 -- ======================================
 -- AUDIT LOGS TABLE
 CREATE TABLE AuditLogs (
@@ -252,7 +232,6 @@ CREATE TABLE AuditLogs (
   ip_address VARCHAR(45),
   FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
-
 
 -- ======================================
 -- ALERTS TABLE
@@ -267,7 +246,6 @@ CREATE TABLE Alerts (
   FOREIGN KEY (trip_id) REFERENCES Trips(trip_id)
 );
 
-
 -- ======================================
 -- MESSAGES TABLE
 CREATE TABLE Messages (
@@ -280,5 +258,11 @@ CREATE TABLE Messages (
   FOREIGN KEY (receiver_id) REFERENCES Users(user_id)
 );
 
-
-
+-- ======================================
+-- PERFORMANCE INDEXES
+CREATE INDEX idx_trip_id ON TripAttendance(trip_id);
+CREATE INDEX idx_student_id ON TripAttendance(student_id);
+CREATE INDEX idx_driver_id ON Trips(driver_id);
+CREATE INDEX idx_parent_id ON Payments(parent_id);
+CREATE INDEX idx_route_id ON Fares(route_id);
+CREATE INDEX idx_vehicle_driver ON DriverVehicleMap(driver_id);
