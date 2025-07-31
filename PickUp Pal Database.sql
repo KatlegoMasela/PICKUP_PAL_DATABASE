@@ -1,322 +1,284 @@
--- PICKUP PAL DATABASE --
+- PICKUP PAL DATABASE
+CREATE DATABASE IF NOT EXISTS PickUpPal;
+USE PickUpPal;
+
+
 -- ======================================
 -- USERS TABLE
--- Stores all users: parents, drivers, admins
-CREATE TABLE PickUpPal.Users (
-  user_id INT AUTO_INCREMENT PRIMARY KEY,               -- Unique ID for each user, increases automatically
-  full_name VARCHAR(100) NOT NULL,                      -- The user's full name
-  email VARCHAR(100) NOT NULL,                          -- User's email (must be unique)
-  phone_number VARCHAR(20) NOT NULL,                    -- User's phone number
-  `role` ENUM('parent', 'driver', 'admin') NOT NULL,    -- Type of user
-  password VARCHAR(100) NOT NULL,                       -- Encrypted password
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,        -- Time the user was added
-  CONSTRAINT UN_email UNIQUE (email)                    -- Prevent duplicate emails
-)
-;
-
-
--- ======================================
--- STUDENTS TABLE
--- Each student belongs to a parent
-CREATE TABLE PickUpPal.Students (
-  student_id INT AUTO_INCREMENT PRIMARY KEY,            -- Unique student ID
-  full_name VARCHAR(100) NOT NULL,                      -- Student's name
-  grade VARCHAR(20),                                    -- Grade in school (e.g. "5th")
-  school_name VARCHAR(100),                             -- Name of the school they attend
-  user_id INT NOT NULL,                                 -- The parent who manages this student
-  FOREIGN KEY (user_id) REFERENCES PickUpPal.Users(user_id)
-)
-;
-
-
--- ======================================
--- STUDENT-PARENT MAPPING TABLE
--- Supports multiple parents per student
-CREATE TABLE PickUpPal.StudentParentMap (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  student_id INT NOT NULL,                              -- Student's ID
-  parent_id INT NOT NULL,                               -- Parent's ID
-  relationship VARCHAR(50) DEFAULT 'parent',            -- Example: mother, father
-  FOREIGN KEY (student_id) REFERENCES PickUpPal.Students(student_id),
-  FOREIGN KEY (parent_id) REFERENCES PickUpPal.Users(user_id),
-  UNIQUE(student_id, parent_id)                         -- Prevents duplicate pairs
-)
-;
-
-
--- ======================================
--- GUARDIANS TABLE
--- Stores emergency contacts for students
-CREATE TABLE PickUpPal.Guardians (
-  guardian_id INT AUTO_INCREMENT PRIMARY KEY,
-  student_id INT NOT NULL,                              -- Linked student
-  full_name VARCHAR(100),                               -- Guardian's name
-  phone_number VARCHAR(20),                             -- Guardian's phone
-  relationship VARCHAR(50),                             -- Example: Aunt, Brother
-  FOREIGN KEY (student_id) REFERENCES PickUpPal.Students(student_id)
-)
-;
-
-
--- ======================================
--- DRIVERS TABLE
--- Each driver links to a user and has car details
-CREATE TABLE PickUpPal.Drivers (
-  driver_id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT,                                           -- User ID for this driver
-  licence_plate VARCHAR(50) NOT NULL,                    -- Their vehicle's plate number
-  verified BOOLEAN DEFAULT FALSE,                        -- If they have been approved
-  FOREIGN KEY (user_id) REFERENCES PickUpPal.Users(user_id)
-)
-;
-
-
--- ======================================
--- VEHICLES TABLE
--- All vehicles used for trips
-CREATE TABLE PickUpPal.Vehicle (
-  vehicle_id INT AUTO_INCREMENT PRIMARY KEY,
-  plate_number VARCHAR(20) NOT NULL,                     -- Car’s plate number
-  model VARCHAR(50),                                     -- Car model (e.g., Toyota Hiace)
-  capacity INT,                                          -- How many students it can carry
-  `year` YEAR,                                           -- Year car was made
-  CONSTRAINT UK_vehicle UNIQUE (plate_number)            -- No duplicate plate numbers
-)
-;
-
-
--- ======================================
--- DRIVER–CAR USAGE TABLE
--- Tracks which driver used which car and when
-CREATE TABLE PickUpPal.Drivers_Car (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  driver_id INT,                                         -- Driver who used the car
-  car_id INT NOT NULL,                                   -- Car that was used
-  start_date DATE,                                       -- When the driver started using the car
-  end_date DATE,                                         -- When they stopped using it
-  FOREIGN KEY (driver_id) REFERENCES PickUpPal.Drivers(driver_id),
-  FOREIGN KEY (car_id) REFERENCES PickUpPal.Vehicle(vehicle_id)
-)
-;
+CREATE TABLE Users (
+  user_id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  phone_number VARCHAR(20) NOT NULL,
+  role ENUM('parent', 'driver', 'admin') NOT NULL,
+  password VARCHAR(100) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 
 -- ======================================
 -- SCHOOLS TABLE
--- Basic school information
-CREATE TABLE PickUpPal.Schools (
+CREATE TABLE Schools (
   school_id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100),                                     -- School name
-  address TEXT,                                          -- School address
-  contact_email VARCHAR(100),                            -- Email for contact
-  phone_number VARCHAR(15)                               -- Phone number
-)
-;
+  name VARCHAR(100) NOT NULL,
+  address TEXT,
+  contact_email VARCHAR(100),
+  phone_number VARCHAR(15)
+);
+
+
+-- ======================================
+-- STUDENTS TABLE
+CREATE TABLE Students (
+  student_id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(100) NOT NULL,
+  grade VARCHAR(20),
+  school_id INT,
+  user_id INT NOT NULL,
+  FOREIGN KEY (school_id) REFERENCES Schools(school_id),
+  FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+
+-- ======================================
+-- STUDENT-PARENT MAPPING TABLE
+CREATE TABLE StudentParentMap (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL,
+  parent_id INT NOT NULL,
+  relationship VARCHAR(50) NOT NULL DEFAULT 'parent',
+  FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+  UNIQUE(student_id, parent_id)
+);
+
+
+-- ======================================
+-- GUARDIANS TABLE
+CREATE TABLE Guardians (
+  guardian_id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  phone_number VARCHAR(20) NOT NULL,
+  relationship VARCHAR(50) NOT NULL,
+  FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
+);
+
+
+-- ======================================
+-- DRIVERS TABLE
+CREATE TABLE Drivers (
+  driver_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  licence_plate VARCHAR(50) NOT NULL,
+  verified BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+
+-- ======================================
+-- VEHICLES TABLE
+CREATE TABLE Vehicle (
+  vehicle_id INT AUTO_INCREMENT PRIMARY KEY,
+  plate_number VARCHAR(20) NOT NULL UNIQUE,
+  model VARCHAR(50),
+  capacity INT,
+  year YEAR
+);
+
+
+-- ======================================
+-- DRIVER–VEHICLE USAGE TABLE
+CREATE TABLE DriverVehicleMap (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  driver_id INT NOT NULL,
+  vehicle_id INT NOT NULL,
+  start_date DATE,
+  end_date DATE,
+  FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id) ON DELETE CASCADE,
+  FOREIGN KEY (vehicle_id) REFERENCES Vehicle(vehicle_id) ON DELETE CASCADE
+);
 
 
 -- ======================================
 -- SHIFTS TABLE
--- Represents school pickup windows (Morning Shift)
-CREATE TABLE PickUpPal.Shifts (
+CREATE TABLE Shifts (
   shift_id INT AUTO_INCREMENT PRIMARY KEY,
-  school_id INT,                                         -- Which school the shift belongs to
-  shift_name VARCHAR(50),                                -- Name like "Morning", "Afternoon"
+  school_id INT NOT NULL,
+  shift_name VARCHAR(50),
   start_time TIME,
   end_time TIME,
-  FOREIGN KEY (school_id) REFERENCES PickUpPal.Schools(school_id)
-)
-;
+  FOREIGN KEY (school_id) REFERENCES Schools(school_id) ON DELETE CASCADE
+);
 
 
 -- ======================================
 -- ROUTES TABLE
--- All predefined trip paths
-CREATE TABLE PickUpPal.Routes (
+CREATE TABLE Routes (
   route_id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100),                                     -- Example: "Route A"
-  origin VARCHAR(100),                                   -- Start location
-  destination VARCHAR(100),                              -- End location
-  estimated_time TIME                                    -- How long it usually takes
-)
-;
+  name VARCHAR(100),
+  origin VARCHAR(100),
+  destination VARCHAR(100),
+  estimated_time TIME
+);
 
 
 -- ======================================
 -- TRIPS TABLE
--- A trip is a scheduled or completed route driven
-CREATE TABLE PickUpPal.Trips (
+CREATE TABLE Trips (
   trip_id INT AUTO_INCREMENT PRIMARY KEY,
-  driver_id INT NOT NULL,                                -- Driver assigned
-  route_id INT NOT NULL,                                 -- Route being followed
-  trip_date DATE,                                        -- When the trip happens
+  driver_id INT NOT NULL,
+  route_id INT NOT NULL,
+  trip_date DATE,
   status ENUM('scheduled', 'in_progress', 'completed', 'cancelled'),
-  FOREIGN KEY (driver_id) REFERENCES PickUpPal.Drivers(driver_id),
-  FOREIGN KEY (route_id) REFERENCES PickUpPal.Routes(route_id)
-)
-;
+  FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id),
+  FOREIGN KEY (route_id) REFERENCES Routes(route_id)
+);
 
 
 -- ======================================
 -- TRIP LOCATIONS TABLE
--- Stores each stop in a trip
-CREATE TABLE PickUpPal.Trip_Locations (
+CREATE TABLE Trip_Locations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   trip_id INT NOT NULL,
-  stop_name VARCHAR(100),                                -- Name of stop (e.g., "Stop 1")
-  stop_time TIME,                                        -- Expected arrival time
-  stop_order INT,                                        -- Order of stops (1, 2, 3)
-  latitude DECIMAL(9,6),                                 -- Location latitude
-  longitude DECIMAL(9,6),                                -- Location longitude
-  FOREIGN KEY (trip_id) REFERENCES PickUpPal.Trips(trip_id)
-)
-;
+  stop_name VARCHAR(100),
+  stop_time TIME,
+  stop_order INT,
+  latitude DECIMAL(9,6),
+  longitude DECIMAL(9,6),
+  FOREIGN KEY (trip_id) REFERENCES Trips(trip_id) ON DELETE CASCADE
+);
 
 
 -- ======================================
 -- TRIP ATTENDANCE TABLE
--- Tracks if students boarded or left the bus
-CREATE TABLE PickUpPal.TripAttendance (
+CREATE TABLE TripAttendance (
   attendance_id INT AUTO_INCREMENT PRIMARY KEY,
   trip_id INT NOT NULL,
   student_id INT NOT NULL,
-  boarded_at TIMESTAMP,                                  -- Time they boarded
-  alighted_at TIMESTAMP,                                 -- Time they got off
-  confirmed_by_driver BOOLEAN DEFAULT FALSE,             -- Did driver confirm?
-  FOREIGN KEY (trip_id) REFERENCES PickUpPal.Trips(trip_id),
-  FOREIGN KEY (student_id) REFERENCES PickUpPal.Students(student_id)
-)
-;
+  boarded_at TIMESTAMP,
+  alighted_at TIMESTAMP,
+  confirmed_by_driver BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (trip_id) REFERENCES Trips(trip_id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
+);
 
 
 -- ======================================
 -- RATINGS TABLE
--- Parents leave feedback for drivers
-CREATE TABLE PickUpPal.Ratings (
+CREATE TABLE Ratings (
   rating_id INT AUTO_INCREMENT PRIMARY KEY,
   trip_id INT NOT NULL,
   parent_id INT NOT NULL,
   driver_id INT NOT NULL,
-  stars INT CHECK (stars BETWEEN 1 AND 5),               -- 1 to 5 rating
-  comment TEXT,                                          -- Optional comment
+  stars INT CHECK (stars BETWEEN 1 AND 5),
+  comment TEXT,
   submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (trip_id) REFERENCES PickUpPal.Trips(trip_id),
-  FOREIGN KEY (parent_id) REFERENCES PickUpPal.Users(user_id),
-  FOREIGN KEY (driver_id) REFERENCES PickUpPal.Drivers(driver_id)
-)
-;
+  FOREIGN KEY (trip_id) REFERENCES Trips(trip_id),
+  FOREIGN KEY (parent_id) REFERENCES Users(user_id),
+  FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id)
+);
 
 
 -- ======================================
 -- PAYMENTS TABLE
--- Keeps record of payments for rides
-CREATE TABLE PickUpPal.Payments (
+CREATE TABLE Payments (
   payment_id INT AUTO_INCREMENT PRIMARY KEY,
   parent_id INT NOT NULL,
   trip_id INT NOT NULL,
-  amount DECIMAL(10,2),                                  -- Amount paid
-  status ENUM('pending', 'paid', 'failed'),              -- Payment status
+  amount DECIMAL(10,2),
+  status ENUM('pending', 'paid', 'failed'),
   payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (parent_id) REFERENCES PickUpPal.Users(user_id),
-  FOREIGN KEY (trip_id) REFERENCES PickUpPal.Trips(trip_id)
-)
-;
+  FOREIGN KEY (parent_id) REFERENCES Users(user_id),
+  FOREIGN KEY (trip_id) REFERENCES Trips(trip_id)
+);
 
 
 -- ======================================
 -- PAYMENT METHODS TABLE
--- User's saved payment preferences
-CREATE TABLE PickUpPal.Payment_Methods (
+CREATE TABLE Payment_Methods (
   method_id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  method_type ENUM('card', 'mobile_wallet', 'bank_transfer'), -- Type of payment
-  provider_name VARCHAR(100),                            -- Example: Visa, Mtn MoMo
-  FOREIGN KEY (user_id) REFERENCES PickUpPal.Users(user_id)
-)
-;
+  method_type ENUM('card', 'mobile_wallet', 'bank_transfer'),
+  provider_name VARCHAR(100),
+  FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
 
 
 -- ======================================
 -- DRIVER PAYOUTS TABLE
--- Records payment given to drivers
-CREATE TABLE PickUpPal.DriverPayouts (
+CREATE TABLE DriverPayouts (
   payout_id INT AUTO_INCREMENT PRIMARY KEY,
   driver_id INT NOT NULL,
   trip_id INT,
   amount DECIMAL(10,2) NOT NULL,
   payout_status ENUM('pending', 'processed', 'failed') DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (driver_id) REFERENCES PickUpPal.Users(user_id),
-  FOREIGN KEY (trip_id) REFERENCES PickUpPal.Trips(trip_id)
-)
-;
+  FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id),
+  FOREIGN KEY (trip_id) REFERENCES Trips(trip_id)
+);
 
 
 -- ======================================
 -- FARES TABLE
--- Price of each route
-CREATE TABLE PickUpPal.Fares (
+CREATE TABLE Fares (
   fare_id INT AUTO_INCREMENT PRIMARY KEY,
   route_id INT NOT NULL,
-  base_fare DECIMAL(10,2),                               -- Starting price
-  price_per_km DECIMAL(10,2),                            -- Extra cost per km
-  FOREIGN KEY (route_id) REFERENCES PickUpPal.Routes(route_id)
-)
-;
+  base_fare DECIMAL(10,2),
+  price_per_km DECIMAL(10,2),
+  FOREIGN KEY (route_id) REFERENCES Routes(route_id)
+);
 
 
 -- ======================================
 -- DOCUMENTS TABLE
--- Stores user documents like ID or license
-CREATE TABLE PickUpPal.Documents (
+CREATE TABLE Documents (
   document_id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  type VARCHAR(50),                                      -- Example: "License"
-  file_url TEXT,                                         -- Where the file is stored
-  verified_at TIMESTAMP,                                 -- When document was verified
-  FOREIGN KEY (user_id) REFERENCES PickUpPal.Users(user_id)
-)
-;
+  type VARCHAR(50),
+  file_url TEXT,
+  verified_at TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
 
 
 -- ======================================
 -- AUDIT LOGS TABLE
--- Tracks changes and actions made in the system
-CREATE TABLE PickUpPal.AuditLogs (
+CREATE TABLE AuditLogs (
   log_id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT,                                           -- Who did the action
-  action TEXT,                                           -- Description of what they did
+  user_id INT,
+  action TEXT,
   timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  ip_address VARCHAR(45),                                -- IP of user (IPv4 or IPv6)
-  FOREIGN KEY (user_id) REFERENCES PickUpPal.Users(user_id)
-)
-;
+  ip_address VARCHAR(45),
+  FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
 
 
 -- ======================================
 -- ALERTS TABLE
--- Emergency or status messages from drivers
-CREATE TABLE PickUpPal.Alerts (
+CREATE TABLE Alerts (
   alert_id INT AUTO_INCREMENT PRIMARY KEY,
   driver_id INT NOT NULL,
   trip_id INT,
   alert_type ENUM('sos', 'delay', 'info', 'general') DEFAULT 'general',
-  message TEXT,                                          -- What the alert is about
+  message TEXT,
   alert_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (driver_id) REFERENCES PickUpPal.Drivers(driver_id),
-  FOREIGN KEY (trip_id) REFERENCES PickUpPal.Trips(trip_id)
-)
-;
+  FOREIGN KEY (driver_id) REFERENCES Drivers(driver_id),
+  FOREIGN KEY (trip_id) REFERENCES Trips(trip_id)
+);
 
 
 -- ======================================
 -- MESSAGES TABLE
--- Messaging between users (e.g., parents & drivers)
-CREATE TABLE PickUpPal.Messages (
+CREATE TABLE Messages (
   message_id INT AUTO_INCREMENT PRIMARY KEY,
   sender_id INT NOT NULL,
   receiver_id INT NOT NULL,
-  content TEXT NOT NULL,                                 -- The message body
+  content TEXT NOT NULL,
   sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (sender_id) REFERENCES PickUpPal.Users(user_id),
-  FOREIGN KEY (receiver_id) REFERENCES PickUpPal.Users(user_id)
-)
-;
+  FOREIGN KEY (sender_id) REFERENCES Users(user_id),
+  FOREIGN KEY (receiver_id) REFERENCES Users(user_id)
+);
+
+
+
